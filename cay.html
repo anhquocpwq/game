@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Top-Down Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        size: 20,
+        speed: 5
+    };
+
+    const bullets = [];
+    const enemies = [];
+
+    const bulletSpeed = 7;
+    const enemySpeed = 2;
+
+    function calculateAngle(src, dest) {
+        const dx = dest.x - src.x;
+        const dy = dest.y - src.y;
+        return Math.atan2(dy, dx);
+    }
+
+    function spawnEnemy() {
+        const x = Math.random() < 0.5 ? 0 : canvas.width;
+        const y = Math.random() * canvas.height;
+        enemies.push({ x, y, size: 20 });
+    }
+
+    function updatePlayer() {
+        if (keys["ArrowUp"] || keys["w"]) player.y -= player.speed;
+        if (keys["ArrowDown"] || keys["s"]) player.y += player.speed;
+        if (keys["ArrowLeft"] || keys["a"]) player.x -= player.speed;
+        if (keys["ArrowRight"] || keys["d"]) player.x += player.speed;
+
+        player.x = Math.max(0, Math.min(canvas.width, player.x));
+        player.y = Math.max(0, Math.min(canvas.height, player.y));
+    }
+
+    function updateBullets() {
+        bullets.forEach((bullet, index) => {
+            bullet.x += Math.cos(bullet.angle) * bulletSpeed;
+            bullet.y += Math.sin(bullet.angle) * bulletSpeed;
+
+            if (
+                bullet.x < 0 || bullet.x > canvas.width ||
+                bullet.y < 0 || bullet.y > canvas.height
+            ) {
+                bullets.splice(index, 1);
+            }
+        });
+    }
+
+    function updateEnemies() {
+        enemies.forEach((enemy, enemyIndex) => {
+            const angle = calculateAngle(enemy, player);
+            enemy.x += Math.cos(angle) * enemySpeed;
+            enemy.y += Math.sin(angle) * enemySpeed;
+
+            bullets.forEach((bullet, bulletIndex) => {
+                const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+                if (dist < enemy.size) {
+                    enemies.splice(enemyIndex, 1);
+                    bullets.splice(bulletIndex, 1);
+                }
+            });
+        });
+    }
+
+    function drawPlayer() {
+        ctx.fillStyle = "blue";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawBullets() {
+        ctx.fillStyle = "black";
+        bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function drawEnemies() {
+        ctx.fillStyle = "red";
+        enemies.forEach(enemy => {
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    const keys = {};
+
+    window.addEventListener("keydown", (e) => {
+        keys[e.key] = true;
+        if (e.key === " ") {
+            const angle = calculateAngle(player, { x: mouse.x, y: mouse.y });
+            bullets.push({ x: player.x, y: player.y, angle });
+        }
+    });
+
+    window.addEventListener("keyup", (e) => {
+        keys[e.key] = false;
+    });
+
+    const mouse = { x: 0, y: 0 };
+    window.addEventListener("mousemove", (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    setInterval(spawnEnemy, 2000);
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        updatePlayer();
+        updateBullets();
+        updateEnemies();
+
+        drawPlayer();
+        drawBullets();
+        drawEnemies();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+</body>
+</html>
